@@ -1,0 +1,357 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+/* Sage approved visual identity — additive stylesheet; original style.css remains untouched. */
+:root {
+  --sage-bg: #f0f6fc;
+  --sage-red: #4d0e12;
+  --sage-blue: #a5bcd6;
+  --sage-yellow: #f5efc6;
+  --sage-brown: #4a2e27;
+  --sage-ink: #231815;
+  --sage-white: #fff;
+  font-family: 'Outfit', sans-serif;
+}
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--sage-bg);
+}
+body,
+button,
+input,
+select,
+textarea {
+  font-family: 'Outfit', sans-serif !important;
+}
+body {
+  color: var(--sage-ink);
+}
+.app {
+  background: var(--sage-bg);
+  color: var(--sage-ink);
+  padding-bottom: 110px;
+}
+.header {
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.header h1 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 650;
+  letter-spacing: -0.045em;
+  color: var(--sage-brown);
+  line-height: 1.13;
+  margin-top: 12px;
+}
+.eyebrow {
+  font-size: 10px !important;
+  letter-spacing: 0.19em !important;
+  font-weight: 700 !important;
+  color: var(--sage-brown) !important;
+}
+.sage-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--sage-red);
+}
+.sage-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 10px;
+  background: var(--sage-red);
+  color: var(--sage-yellow);
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+}
+.sage-brand-name {
+  font-size: 27px;
+  letter-spacing: -0.07em;
+  font-weight: 750;
+  line-height: 1;
+}
+.hero {
+  background: var(--sage-red) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 21px !important;
+  box-shadow: 0 12px 30px #4d0e1218;
+}
+.hero *,
+.hero small,
+.hero .balance,
+.hero strong {
+  color: #fff !important;
+}
+.hero small {
+  opacity: 0.88;
+  letter-spacing: 0.025em;
+}
+.hero .balance {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 650;
+  letter-spacing: -0.045em;
+}
+.hero-bottom {
+  border-color: #ffffff33 !important;
+}
+.card {
+  background: #fff !important;
+  border: 1px solid #e5e8ee !important;
+  border-radius: 19px !important;
+  box-shadow: 0 4px 18px #302b3d08 !important;
+  color: var(--sage-ink);
+}
+.card strong,
+.section-head h2,
+.modal h2 {
+  color: var(--sage-brown);
+  letter-spacing: -0.025em;
+}
+.section-head h2 {
+  font-weight: 700;
+}
+.muted,
+.preview {
+  color: #766965 !important;
+}
+.switcher {
+  background: #e7edf4 !important;
+  border-radius: 16px !important;
+  padding: 4px !important;
+}
+.switcher button {
+  border-radius: 12px !important;
+  color: var(--sage-brown) !important;
+  font-weight: 500;
+}
+.switcher button.active {
+  background: #fff !important;
+  color: var(--sage-red) !important;
+  box-shadow: 0 2px 7px #4d0e1214 !important;
+  font-weight: 700;
+}
+button.primary,
+.primary,
+.nav .add {
+  background: var(--sage-red) !important;
+  color: #fff !important;
+  border-color: var(--sage-red) !important;
+  border-radius: 15px !important;
+  font-weight: 650 !important;
+}
+button.secondary,
+.secondary {
+  background: var(--sage-yellow) !important;
+  color: var(--sage-red) !important;
+  border-color: #e8dba8 !important;
+  border-radius: 15px !important;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--sage-blue) !important;
+  outline-offset: 2px;
+}
+.progress {
+  background: #e9e8e8 !important;
+  border-radius: 100px !important;
+  overflow: hidden;
+}
+.progress span {
+  background: var(--sage-red) !important;
+  border-radius: 100px !important;
+}
+.two-cards > .card:first-child,
+.two-cards .card:first-child {
+  background: var(--sage-blue) !important;
+  border-color: var(--sage-blue) !important;
+}
+.two-cards > .card:last-child,
+.two-cards .card:last-child {
+  background: var(--sage-yellow) !important;
+  border-color: var(--sage-yellow) !important;
+}
+.wishlist .wish:first-child,
+.wishlist .wish-large:first-child {
+  background: var(--sage-blue) !important;
+  border-radius: 15px !important;
+}
+.wishlist .wish:nth-child(2),
+.wishlist .wish-large:nth-child(2) {
+  background: var(--sage-yellow) !important;
+  border-radius: 15px !important;
+}
+.nav-wrap {
+  background: transparent !important;
+}
+.nav {
+  background: #fff !important;
+  border: 1px solid #e6e8ec !important;
+  border-radius: 24px !important;
+  box-shadow: 0 7px 30px #3e304018 !important;
+}
+.nav .tabs button {
+  color: #655854 !important;
+}
+.nav .tabs button.active {
+  color: var(--sage-red) !important;
+}
+.nav .tabs button.active .ico {
+  color: var(--sage-red) !important;
+}
+.nav .add {
+  box-shadow: 0 6px 14px #4d0e1226;
+}
+.avatar {
+  background: var(--sage-yellow) !important;
+  color: var(--sage-red) !important;
+  border-radius: 50% !important;
+}
+.modal {
+  background: #fff !important;
+  border-radius: 24px !important;
+  color: var(--sage-ink) !important;
+}
+.overlay {
+  background: #23181588 !important;
+}
+input,
+select,
+textarea {
+  background: #fff !important;
+  border: 1px solid #d8dce3 !important;
+  border-radius: 12px !important;
+  color: var(--sage-ink) !important;
+}
+.notice {
+  background: #f4f1e7 !important;
+  border-radius: 13px !important;
+  color: var(--sage-brown) !important;
+}
+.banner {
+  background: var(--sage-yellow) !important;
+  color: var(--sage-brown) !important;
+}
+.toast {
+  background: var(--sage-red) !important;
+  color: white !important;
+  border-radius: 15px !important;
+}
+@media (max-width: 440px) {
+  .sage-brand-name {
+    font-size: 25px;
+  }
+  .header h1 {
+    font-size: clamp(24px, 7vw, 33px);
+  }
+  .nav .tabs .txt {
+    font-size: 10px;
+  }
+}
+
+/* Sage — centred Quick Add navigation */
+.sage-bottom-nav {
+  display: block !important;
+  width: 100%;
+}
+
+.sage-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  width: 100%;
+  gap: 2px;
+}
+
+.sage-nav-grid > button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 2px;
+  border: 0;
+  background: transparent;
+  color: #4a2e27;
+}
+
+.sage-nav-grid .sage-center-add {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  border-radius: 50% !important;
+  background: #4d0e12 !important;
+  color: #f5efc6 !important;
+  font-size: 25px !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.sage-more-nav {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 3px 0 5px;
+}
+
+.sage-more-nav button {
+  border: 0;
+  background: transparent;
+  color: #4a2e27;
+  font-size: 11px;
+}
+
+.sage-more-nav button.active,
+.sage-nav-grid button.active {
+  color: #4d0e12;
+  font-weight: 700;
+}
+
+/* Sage — Manrope typography */
+html,
+body,
+#root,
+.app,
+button,
+input,
+select,
+textarea {
+  font-family: 'Manrope', sans-serif !important;
+}
+
+.sage-brand-name {
+  font-family: 'Manrope', sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: -1.5px;
+}
+
+h1, h2, h3 {
+  font-family: 'Manrope', sans-serif !important;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+
+.balance {
+  font-family: 'Manrope', sans-serif !important;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+

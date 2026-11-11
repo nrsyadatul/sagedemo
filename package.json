@@ -1,0 +1,1 @@
+{"name":"sage-phase2","private":true,"version":"0.2.0","type":"module","scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview --host 0.0.0.0"},"dependencies":{"@supabase/supabase-js":"^2.119.0","react":"^19.0.0","react-dom":"^19.0.0"},"devDependencies":{"@vitejs/plugin-react":"^4.7.0","vite":"^6.2.0"}}
