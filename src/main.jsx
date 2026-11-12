@@ -130,6 +130,16 @@ function App() {
   const [budgetsLoading, setBudgetsLoading] = useState(false);
   const [budgetsError, setBudgetsError] = useState('');
   const [budgetMonth, setBudgetMonth] = useState(todayLocal().slice(0, 7));
+  const shiftBudgetMonth = (offset) => {
+    setBudgetMonth((current) => {
+      const [year, month] = current.split('-').map(Number);
+      const next = new Date(year, month - 1 + offset, 1);
+      return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+    });
+  };
+  const budgetMonthLabel = new Date(`${budgetMonth}-01T12:00:00`).toLocaleDateString('en-MY', {
+    month: 'long', year: 'numeric'
+  });
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [editingBudget, setEditingBudget] = useState(null);
   const [budgetForm, setBudgetForm] = useState(emptyBudget);
@@ -1048,11 +1058,72 @@ function App() {
   const other =
     tab === 'budget' ? (
       <>
-        <div className="card" style={{ marginBottom: 14 }}>
-          <label>Budget month
-            <input type="month" value={budgetMonth} onChange={(e) => setBudgetMonth(e.target.value)} />
-          </label>
-        </div>
+        
+<div className="card" style={{ marginBottom: 14 }}>
+  <div
+    className="muted"
+    style={{ fontSize: 12, fontWeight: 650, marginBottom: 16 }}
+  >
+    BUDGET MONTH
+  </div>
+
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 20,
+    }}
+  >
+    <button
+      type="button"
+      className="secondary"
+      aria-label="Previous month"
+      onClick={() => shiftBudgetMonth(-1)}
+      style={{
+        width: 44,
+        height: 44,
+        minWidth: 44,
+        flex: '0 0 44px',
+        padding: 0,
+        fontSize: 24,
+        borderRadius: 14,
+      }}
+    >
+      ‹
+    </button>
+
+    <strong
+      style={{
+        textAlign: 'center',
+        fontSize: 17,
+        width: 145,
+        flexShrink: 0,
+      }}
+    >
+      {budgetMonthLabel}
+    </strong>
+
+    <button
+      type="button"
+      className="secondary"
+      aria-label="Next month"
+      onClick={() => shiftBudgetMonth(1)}
+      style={{
+        width: 44,
+        height: 44,
+        minWidth: 44,
+        flex: '0 0 44px',
+        padding: 0,
+        fontSize: 24,
+        borderRadius: 14,
+      }}
+    >
+      ›
+    </button>
+  </div>
+</div>
+
         {view === 'partner' ? (
           <div className="card"><strong>Partner budgets are private</strong>
             <p className="muted">Only your partner can see their personal budgets. Switch to Shared to see your household budgets.</p>
@@ -1155,7 +1226,7 @@ function App() {
     );
 
   return (
-    <main className="app">
+    <main className="app" style={{ paddingBottom: 190 }}>
       {!configured && (
         <div className="banner">
           <strong>Preview mode</strong> · Add Supabase environment variables to
