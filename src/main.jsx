@@ -77,6 +77,9 @@ const categories = [
   'Gift',
   'Other',
 ];
+const budgetCategories = categories.filter((c) => !['Salary', 'Bonus', 'Refund'].includes(c));
+const emptyBudget = () => ({ category: 'Food & drinks', amount: '', visibility: 'personal' });
+
 const emptyAccount = () => ({
   name: '',
   account_type: 'savings',
@@ -123,6 +126,15 @@ function App() {
     [txForm, setTxForm] = useState(emptyTransaction),
     [txSaving, setTxSaving] = useState(false),
     [txFormError, setTxFormError] = useState('');
+  const [budgets, setBudgets] = useState([]);
+  const [budgetsLoading, setBudgetsLoading] = useState(false);
+  const [budgetsError, setBudgetsError] = useState('');
+  const [budgetMonth, setBudgetMonth] = useState(todayLocal().slice(0, 7));
+  const [showBudgetForm, setShowBudgetForm] = useState(false);
+  const [editingBudget, setEditingBudget] = useState(null);
+  const [budgetForm, setBudgetForm] = useState(emptyBudget);
+  const [budgetFormError, setBudgetFormError] = useState('');
+  const [budgetSaving, setBudgetSaving] = useState(false);
   const user = session?.user;
 
   async function refresh(userId) {
@@ -167,6 +179,7 @@ function App() {
         setHousehold(null);
         setAccounts([]);
         setTransactions([]);
+        setBudgets([]);
         setShowAddAccount(false);
       }
     });
@@ -274,13 +287,17 @@ function App() {
     if (!supabase || !userId) {
       setAccounts([]);
       setTransactions([]);
+      setBudgets([]);
       return;
     }
+
     setAccountsLoading(true);
     setTxLoading(true);
+    setBudgetsLoading(true);
+    setBudgetsError('');
     setAccountsError('');
     setTxError('');
-    const [a, t] = await Promise.all([
+    const [a, t, b] = await Promise.all([
       supabase
         .from('accounts')
         .select(
@@ -294,6 +311,7 @@ function App() {
         )
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false }),
+      supabase.from('budgets').select('id,household_id,owner_id,visibility,month,category,amount,created_at').order('category'),
     ]);
     if (a.error) {
       setAccountsError(a.error.message);
@@ -303,6 +321,9 @@ function App() {
       setTxError(t.error.message);
       setTransactions([]);
     } else setTransactions(t.data || []);
+    if (b.error) { setBudgetsError(b.error.message); setBudgets([]); }
+    else setBudgets(b.data || []);
+    setBudgetsLoading(false);
     setAccountsLoading(false);
     setTxLoading(false);
   }
@@ -311,6 +332,7 @@ function App() {
     else {
       setAccounts([]);
       setTransactions([]);
+      setBudgets([]);
     }
   }, [user?.id]);
 
@@ -460,6 +482,67 @@ function App() {
     (t) => accountById[t.account_id]
   );
   const thisMonth = todayLocal().slice(0, 7);
+  const budgetScope = (a, scope) => a && (scope === 'shared'
+    ? a.visibility === 'shared'
+    : a.visibility === 'personal' && a.owner_id === user?.id);
+  const scopeBudgets = (scope, month) => budgets.filter((b) =>
+    b.month === month && b.visibility === (scope === 'shared' ? 'shared' : 'personal') &&
+    (scope === 'shared' || b.owner_id === user?.id));
+  const spentInCategory = (scope, month, category) => Math.round(
+    visibleTransactions.filter((t) => t.kind === 'expense' &&
+      t.transaction_date?.startsWith(month) && t.category === category &&
+      budgetScope(accountById[t.account_id], scope))
+      .reduce((sum, t) => sum + Math.round(Number(t.amount) * 100), 0)) / 100;
+  const budgetSummary = (scope, month) => {
+    const items = scopeBudgets(scope, month);
+    const limit = items.reduce((sum, b) => sum + Number(b.amount), 0);
+    const spent = items.reduce((sum, b) => sum + spentInCategory(scope, month, b.category), 0);
+    return { items, limit, spent, remaining: limit - spent };
+  };
+  function openBudgetForm(b = null) {
+    setEditingBudget(b);
+    setBudgetForm(b ? { category: b.category, amount: String(b.amount), visibility: b.visibility }
+      : { ...emptyBudget(), visibility: view === 'shared' ? 'shared' : 'personal' });
+    setBudgetFormError('');
+    setShowBudgetForm(true);
+  }
+  async function saveBudget(e) {
+    e.preventDefault();
+    if (budgetSaving || !user) return;
+    const amount = Number(budgetForm.amount);
+    if (!Number.isFinite(amount) || amount <= 0 || !/^\d+(\.\d{1,2})?$/.test(budgetForm.amount.trim())) {
+      setBudgetFormError('Enter a positive budget amount with up to 2 decimal places.'); return;
+    }
+    setBudgetSaving(true);
+    setBudgetFormError('');
+    try {
+      let r;
+      if (editingBudget) {
+        r = await supabase.from('budgets').update({ amount, updated_at: new Date().toISOString() })
+          .eq('id', editingBudget.id).eq('owner_id', user.id);
+      } else {
+        const { data: householdId, error: householdError } = await supabase.rpc('my_household_id');
+        if (householdError) throw householdError;
+        if (!householdId) throw new Error('Create or join a household first.');
+        r = await supabase.from('budgets').insert({ household_id: householdId,
+          owner_id: user.id, visibility: budgetForm.visibility, month: budgetMonth,
+          category: budgetForm.category, amount });
+      }
+      if (r.error) throw r.error;
+      setShowBudgetForm(false);
+      setMsg(editingBudget ? 'Budget updated.' : 'Budget created.');
+      await loadFinance(user.id);
+    } catch (err) {
+      setBudgetFormError(err.code === '23505' ? 'A budget already exists for this category and month.' : (err.message || 'Could not save budget.'));
+    } finally { setBudgetSaving(false); }
+  }
+  async function deleteBudget(b) {
+    if (!user || b.owner_id !== user.id || !window.confirm(`Delete ${b.category} budget for ${b.month}?`)) return;
+    const { error } = await supabase.from('budgets').delete().eq('id', b.id).eq('owner_id', user.id);
+    if (error) setBudgetsError(error.message);
+    else { setMsg('Budget deleted.'); await loadFinance(user.id); }
+  }
+
   const expenseTotal = (filter) =>
     visibleTransactions
       .filter(
@@ -673,6 +756,7 @@ function App() {
   );
   const d = demo[view],
     privatePartner = view === 'partner';
+  const homeBudget = user && view !== 'partner' ? budgetSummary(view, thisMonth) : null;
   const card = (children) => <div className="card">{children}</div>;
   const head = (title, link, fn) => (
     <div className="section-head">
@@ -722,7 +806,7 @@ function App() {
           </div>
           <div className="metric">
             <small>Budget remaining</small>
-            <strong>{money(d.budget - d.spent)}</strong>
+            <strong>{homeBudget && !budgetsError ? money(homeBudget.remaining) : '—'}</strong>
           </div>
         </div>
       </div>
@@ -730,12 +814,12 @@ function App() {
       {card(
         <>
           <div className="card-head">
-            <strong>{money(d.budget - d.spent)} left this month</strong>
+            <strong>{homeBudget && !budgetsError && homeBudget.items.length ? `${money(homeBudget.remaining)} left this month` : 'No budget set'}</strong>
             <span className="muted">
-              {Math.round((d.spent / d.budget) * 100)}% used
+              {homeBudget && homeBudget.limit > 0 ? `${Math.round((homeBudget.spent / homeBudget.limit) * 100)}% used` : '—'}
             </span>
           </div>
-          <Progress value={d.spent} max={d.budget} />
+          <Progress value={homeBudget?.spent || 0} max={homeBudget?.limit || 0} />
         </>
       )}
       {head('Savings goals', 'View goals', () => setTab('goals'))}
@@ -964,26 +1048,71 @@ function App() {
   const other =
     tab === 'budget' ? (
       <>
-        <div className="hero">
-          <small>Remaining this month</small>
-          <div className="balance">{money(d.budget - d.spent)}</div>
-          <small>Monthly category budgets</small>
+        <div className="card" style={{ marginBottom: 14 }}>
+          <label>Budget month
+            <input type="month" value={budgetMonth} onChange={(e) => setBudgetMonth(e.target.value)} />
+          </label>
         </div>
-        {[
-          ['Food & drinks', 620, 900],
-          ['Transport', 280, 500],
-          ['Shopping', 350, 600],
-        ].map(([n, s, l]) => (
-          <div className="card" key={n}>
-            <div className="card-head">
-              <strong>{n}</strong>
-              <span className="muted">
-                {money(s)} / {money(l)}
-              </span>
-            </div>
-            <Progress value={s} max={l} />
+        {view === 'partner' ? (
+          <div className="card"><strong>Partner budgets are private</strong>
+            <p className="muted">Only your partner can see their personal budgets. Switch to Shared to see your household budgets.</p>
           </div>
-        ))}
+        ) : !user ? (
+          <div className="card"><strong>Sign in to manage budgets</strong>
+            <p className="muted">Your budgets are saved securely in Supabase.</p>
+            <button className="primary" onClick={() => setShowAuth(true)}>Sign in</button>
+          </div>
+        ) : budgetsLoading ? (
+          <div className="card">Loading budgets…</div>
+        ) : budgetsError ? (
+          <div className="card" role="alert"><strong>Could not load budgets</strong>
+            <p className="muted">{budgetsError}</p>
+            <p className="muted">Run Sage_budget_setup.sql in your Supabase SQL Editor, then refresh Sage.</p>
+          </div>
+        ) : (
+          <>
+            {(() => {
+              const summary = budgetSummary(view, budgetMonth);
+              return <>
+                <div className="hero">
+                  <small>{view === 'shared' ? 'Shared budget remaining' : 'Personal budget remaining'} · {budgetMonth}</small>
+                  <div className="balance">{summary.items.length ? money(summary.remaining) : money(0)}</div>
+                  <div className="hero-bottom">
+                    <div className="metric"><small>Budgeted</small><strong>{money(summary.limit)}</strong></div>
+                    <div className="metric"><small>Spent in budgeted categories</small><strong>{money(summary.spent)}</strong></div>
+                  </div>
+                </div>
+                {summary.items.length > 0 && <div className="card" style={{ marginBottom: 14 }}>
+                  <div className="card-head"><strong>Overall progress</strong>
+                    <span className="muted">{summary.limit > 0 ? Math.round(summary.spent / summary.limit * 100) : 0}% used</span></div>
+                  <Progress value={summary.spent} max={summary.limit} />
+                </div>}
+                <button className="primary" style={{ width: '100%', marginBottom: 14 }} onClick={() => openBudgetForm()}>
+                  + Add category budget
+                </button>
+                {summary.items.length === 0 ? <div className="card"><strong>No budgets for this month yet</strong>
+                  <p className="muted">Set a limit for each spending category. Sage will calculate spending from your recorded expenses automatically.</p>
+                </div> : summary.items.map((b) => {
+                  const spent = spentInCategory(view, budgetMonth, b.category);
+                  const remaining = Number(b.amount) - spent;
+                  return <div className="card" key={b.id} style={{ marginBottom: 10 }}>
+                    <div className="card-head"><strong>{b.category}</strong>
+                      <span className="muted">{money(spent)} / {money(b.amount)}</span></div>
+                    <Progress value={spent} max={Number(b.amount)} />
+                    <p className="muted" style={{ marginTop: 8, color: remaining < 0 ? '#a33a3a' : undefined }}>
+                      {remaining < 0 ? `${money(-remaining)} over budget` : `${money(remaining)} remaining`}
+                    </p>
+                    {b.owner_id === user.id && <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="secondary" onClick={() => openBudgetForm(b)}>Edit</button>
+                      <button className="secondary" onClick={() => deleteBudget(b)}>Delete</button>
+                    </div>}
+                  </div>;
+                })}
+                <p className="muted">Only expenses count towards budgets. Income and transfers are excluded. Spending outside budgeted categories is not included in the overall progress.</p>
+              </>;
+            })()}
+          </>
+        )}
       </>
     ) : tab === 'goals' ? (
       <>
@@ -1092,7 +1221,7 @@ function App() {
             : other}
           <div className="preview">
             {
-              'Sage · Accounts and transactions are live · Budgets, goals and wishlist are sample data'
+              'Sage · Accounts, transactions and budgets are live · Goals and wishlist are sample data'
             }
           </div>
         </>
@@ -1306,6 +1435,39 @@ function App() {
               </>
             )}
             {msg && <div className="notice">{msg}</div>}
+          </div>
+        </div>
+      )}
+      {showBudgetForm && user && (
+        <div className="overlay top" role="dialog" aria-modal="true" aria-label="Budget editor">
+          <div className="modal" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
+            <button className="close" type="button" onClick={() => setShowBudgetForm(false)} disabled={budgetSaving}>×</button>
+            <h2>{editingBudget ? 'Edit budget' : 'Add category budget'}</h2>
+            <p className="muted">{editingBudget?.month || budgetMonth} · {editingBudget?.visibility === 'shared' || (!editingBudget && budgetForm.visibility === 'shared') ? 'Shared' : 'Personal'}</p>
+            <form onSubmit={saveBudget}>
+              {!editingBudget && <>
+                <label>Visibility
+                  <select value={budgetForm.visibility} onChange={(e) => setBudgetForm((p) => ({ ...p, visibility: e.target.value }))}>
+                    <option value="personal">Personal — only me</option>
+                    <option value="shared">Shared — household</option>
+                  </select>
+                </label>
+                <label>Category
+                  <select value={budgetForm.category} onChange={(e) => setBudgetForm((p) => ({ ...p, category: e.target.value }))}>
+                    {budgetCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </label>
+              </>}
+              {editingBudget && <p><strong>{editingBudget.category}</strong></p>}
+              <label>Monthly limit (RM)
+                <input type="number" min="0.01" step="0.01" required value={budgetForm.amount}
+                  onChange={(e) => setBudgetForm((p) => ({ ...p, amount: e.target.value }))} placeholder="e.g. 800.00" />
+              </label>
+              {budgetFormError && <div className="notice" role="alert">{budgetFormError}</div>}
+              <button className="primary" type="submit" disabled={budgetSaving} style={{ width: '100%', marginTop: 12 }}>
+                {budgetSaving ? 'Saving…' : editingBudget ? 'Save changes' : 'Create budget'}
+              </button>
+            </form>
           </div>
         </div>
       )}
@@ -1862,7 +2024,7 @@ function App() {
           </div>
         </nav>
       </div>
-      {msg && !showAuth && !showHouse && !showAddAccount && !showTx && (
+      {msg && !showAuth && !showHouse && !showAddAccount && !showTx && !showBudgetForm && (
         <div className="toast" role="status" onClick={() => setMsg('')}>
           {msg} ×
         </div>
